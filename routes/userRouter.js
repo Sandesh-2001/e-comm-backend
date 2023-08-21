@@ -12,6 +12,10 @@ router
 
 router.route("/org").patch(usersController.updateCompanyInfo);
 
-// router.route("/:id")
+router
+  .route("/:userId")
+  .patch(usersController.updateUserInfo)
+  .delete(usersController.deleteUser);
+router.route("/role/:userId").patch(usersController.updateRole);
 
 module.exports = router;

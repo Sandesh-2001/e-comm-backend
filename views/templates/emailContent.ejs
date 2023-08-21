@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body>
+    <div class="bg-secondary d-flex">
+      <a href="login-email">Back</a>
+      <div class="py-3" style="margin-left: 25%">
+        <p><span class="fw-bold">From: </span><span><%= email.from %></span></p>
+        <p><span class="fw-bold">To: </span><span><%= email.to %></span></p>
+
+        <p>
+          <span class="fw-bold">Subject: </span
+          ><span><%= email.subject %></span>
+        </p>
+      </div>
+    </div>
+
+    <div
+      class="py-3 d-flex flex-column align-items-center justify-content-center"
+    >
+      <div class="text-start w-50">
+        <p>Dear user,</p>
+        <% if( email.subject ==="Forgot Password"){ %>
+        <p>To reset your password, click on this link:</p>
+        <%}%>
+      </div>
+
+      <a href="<%=email.link%>" style="word-break: break-word" class="w-50"
+        ><%=email.link%></a
+      >
+      <div class="text-start w-50 mt-3">
+        <% if( email.subject ==="Forgot Password"){ %>
+        <p>
+          If you did not request any password resets, then ignore this email.
+        </p>
+        <%}%>
+      </div>
+    </div>
+  </body>
+</html>

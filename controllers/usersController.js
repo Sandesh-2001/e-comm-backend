@@ -1,4 +1,5 @@
 const Seller = require("./../modals/sellerAuth");
+const Org = require("./../modals/orgModal");
 const asyncErrorHandler = require("./../utils/asyncErrorHandler");
 const ApiFeatures = require("./../utils/ApiFeatures");
 const CustomError = require("./../utils/customErrorHandler");
@@ -24,7 +25,11 @@ const createUser = asyncErrorHandler(async (req, res, next) => {
   console.log("hii");
 
   const sellerData1 = await Seller.create(user);
-  res.status(201).json(sellerData1);
+  const orgData = await Org.findById(sellerData._org);
+
+  const data = { ...sellerData1._doc, _org: orgData };
+
+  res.status(201).json(data);
 });
 
 const getAllUsers = asyncErrorHandler(async (req, res, next) => {
@@ -35,13 +40,21 @@ const getAllUsers = asyncErrorHandler(async (req, res, next) => {
   const features = new ApiFeatures(
     Seller.find({ _org: sellers._org }),
     req.query
-  ).paginate();
+  )
+    .paginate()
+    .sort()
+    .filter();
   const userData = await features.query;
+  const orgData = await Org.findById(sellers._org);
   const totalResults = allData.length;
+  const data = userData.map((data) => {
+    let obj = { ...data._doc, _org: orgData };
+    return obj;
+  });
   console.log("data is", allData);
 
   res.status(200).json({
-    results: userData,
+    results: data,
     page: page,
     limit: limit,
     totalResults: totalResults,
@@ -54,13 +67,73 @@ const updateCompanyInfo = asyncErrorHandler(async (req, res, next) => {
   const { email, name } = req.body;
 
   const seller = await Seller.findById({ _id: tokenObj.id });
-
-  const updateData = await Seller.findByIdAndUpdate(
-    { "_org._id": new ObjectId(seller._org._id) },
-    { $set: { "_org.name": name, "_org_.email": email } }
-  );
-  console.log("update Data" + updateData);
-  res.status(202).json(updateData);
+  console.log("seller info", seller);
+  const updateData = await Org.findByIdAndUpdate(seller._org, {
+    email: email,
+    name: name,
+  });
+  const updatedData = await Org.findById(seller._org);
+  res.status(202).json(updatedData);
 });
 
-module.exports = { createUser, getAllUsers, updateCompanyInfo };
+const updateUserInfo = asyncErrorHandler(async (req, res, next) => {
+  const { email, name, password } = req.body;
+
+  const updateData = await Seller.findByIdAndUpdate(
+    req.params.userId,
+    {
+      email,
+      name,
+      password,
+    },
+    { runValidators: true }
+  );
+  const getData = await Seller.findById(req.params.userId);
+  if (!getData) {
+    return res.status(400).json({
+      status: "fail",
+      message: "The user you are trying to update is not found!!! ",
+    });
+  }
+  res.status(200).json(getData);
+});
+
+const updateRole = asyncErrorHandler(async (req, res, next) => {
+  const { role } = req.body;
+
+  const updateRoleData = await Seller.findByIdAndUpdate(
+    req.params.userId,
+    {
+      role: role,
+    },
+    { runValidators: true }
+  );
+
+  const getData = await Seller.findById(req.params.userId);
+  if (!getData) {
+    return res.status(400).json({
+      status: "fail",
+      message: "The user you are trying to update is not found!!! ",
+    });
+  }
+
+  res.status(200).json(getData);
+});
+
+const deleteUser = asyncErrorHandler(async (req, res, next) => {
+  const deleteData = await Seller.findByIdAndDelete(req.params.userId);
+
+  res.status(200).json({
+    status: "success",
+    results: null,
+  });
+});
+
+module.exports = {
+  createUser,
+  getAllUsers,
+  updateCompanyInfo,
+  updateUserInfo,
+  updateRole,
+  deleteUser,
+};
