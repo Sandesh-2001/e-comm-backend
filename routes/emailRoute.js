@@ -3,14 +3,16 @@ const authController = require("./../controllers/authController");
 
 const router = express.Router();
 
-router.route("/").get(function (req, res) {
-  res.render("templates/emailLogin");
+router
+  .route("/")
+  .get(function (req, res) {
+    res.render("templates/emailLogin");
+  })
+  .post(authController.verifyLogin, authController.emailHomeGet);
 
-  //   console.log("email is" + req.body.data);
-  //   res.render;
-});
-
-router.post("/login-email", authController.verifyLogin);
+router
+  .route("/:email")
+  .get(authController.verifyLogin, authController.emailHomeGet);
 
 router.get("/view/:id", authController.emailContent);
 

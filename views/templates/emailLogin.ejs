@@ -18,15 +18,19 @@
       <div class="card-body text-center">
         <h5 class="card-title mb-3">Please enter email address</h5>
         <p class="card-text">
-            <form action="emails/login-email" method ="POST">
+            <form action="emails" method ="POST">
 
-                <input type="email" name="email" placeholder="Email" class="form-control" />
+                <input type="email" name="email" placeholder="Email" id="email" class="form-control" />
 
-                <button type="submit" class="btn btn-secondary">Login</button>
+                <button type="submit"   class="btn btn-secondary">Login</button>
 
             </form>
         </p>
       </div>
     </div>
+    <script>
+      const data = document.getElementById("email").value; 
+
+    </script>
   </body>
 </html>

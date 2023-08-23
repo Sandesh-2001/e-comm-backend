@@ -13,22 +13,32 @@ const signToken = (id) => {
   });
   return token;
 };
+
 const verifyToken = asyncErrorHandler(async (req, res, next) => {
-  const rawToken = req.headers.authorization;
+  const rawToken = req.headers.authorization || req.query.token;
   // console.log("Authorization token is", token);
   let token1;
-  if (rawToken && rawToken.startsWith("Bearer")) {
-    token1 = rawToken.split(" ")[1];
+  if (!req.query.token) {
+    if (rawToken && rawToken.startsWith("Bearer")) {
+      token1 = rawToken.split(" ")[1];
+    }
+    if (!token1) {
+      const error = new CustomError("Token Validation failed", 400);
+      next(error);
+    }
+  } else {
+    token1 = rawToken;
   }
-  if (!token1) {
-    const error = new CustomError("Token Validation failed", 400);
-    next(error);
-  }
+
   const tokenObj = await util.promisify(jwt.verify)(
     token1,
     process.env.JWT_SECRET_KEY
   );
+  console.log(tokenObj, "token object is" + Date.now());
+  if (tokenObj.exp <= Date.now()) {
+  }
   req.tokenObj = tokenObj;
+
   next();
 });
 
@@ -73,16 +83,17 @@ const login = asyncErrorHandler(async (req, res, next) => {
       message: "Email and Password are required field",
     });
   }
-  const userData = await Seller.findOne({ email, password }).select("-__v");
-  console.log("org" + userData._org);
-  const orgData = await Org.findById({ _id: userData._org }).select("-__v");
-  console.log(orgData);
-  if (userData.length === 0) {
+  const userData = await Seller.findOne({
+    email: email,
+    password: password,
+  }).select("-__v");
+  if (!userData) {
     return res.status(404).json({
       status: "fail",
-      message: `The user you are requesting with email ${email} doesn't exist. Please Register!!!`,
+      message: `Incorrect email or password!!!`,
     });
   }
+  const orgData = await Org.findById({ _id: userData._org }).select("-__v");
   const token = signToken(userData._id);
   const expiresIn = new Date(Date.now() + 10 * 60 * 60 * 1000).toISOString();
   const data = { ...userData._doc, _org: orgData };
@@ -111,13 +122,16 @@ const changePassword = asyncErrorHandler(async (req, res, next) => {
   const changeRequest = await Seller.findById(tokenObj.id).select("+password");
   console.log("change request", changeRequest);
   if (changeRequest.password === old_password) {
-    const updatePassword = await Seller.findByIdAndUpdate(tokenObj.id, {
-      password: new_password,
-    });
-    const data = await Seller.findById(tokenObj.id);
+    const updatePassword = await Seller.findByIdAndUpdate(
+      tokenObj.id,
+      {
+        password: new_password,
+      },
+      { runValidators: true, new: true }
+    );
 
     res.status(200).json({
-      data,
+      updatePassword,
     });
   } else {
     return res.status(401).json({
@@ -139,12 +153,10 @@ const verifyLogin = asyncErrorHandler(async (req, res, next) => {
   }
   const emails = await EmailModal.find({ user_id: seller._id });
 
-  console.log(emails + "mme");
+  req.emails = emails;
+  req.userEmail = email;
 
-  res.render("./../views/templates/emailHome.ejs", {
-    emails: emails,
-    userEmail: email,
-  });
+  next();
 });
 
 const forgotPassword = asyncErrorHandler(async (req, res, next) => {
@@ -185,6 +197,72 @@ const emailContent = asyncErrorHandler(async (req, res, next) => {
   res.render("./../views/templates/emailContent.ejs", { email: emailData });
 });
 
+const emailHomeGet = asyncErrorHandler(async (req, res, next) => {
+  console.log("this is requested email", req.userEmail);
+  res.render("./../views/templates/emailHome.ejs", {
+    emails: req.emails,
+    userEmail: req.userEmail,
+  });
+});
+
+const resetPassword = asyncErrorHandler(async (req, res, next) => {
+  const { email, password, captcha } = req.body;
+  console.log(req.query.token, "request params is");
+  const verifyToken = jwt.verify(req.query.token, process.env.JWT_SECRET_KEY);
+
+  console.log("verify token is ", verifyToken);
+  const sellerUpdate = await Seller.findByIdAndUpdate(
+    verifyToken.id,
+    { password: password },
+    { runValidators: true, new: true }
+  );
+
+  res.status(200).json({
+    status: "success",
+    data: sellerUpdate,
+  });
+});
+
+const sendVerificationEmail = asyncErrorHandler(async (req, res, next) => {
+  const tokenObj = req.tokenObj;
+  const seller = await Seller.findById(tokenObj.id);
+  const token = signToken(tokenObj.id);
+  const obj = {
+    from: process.env.EMAIL,
+    to: seller.email,
+    subject: "Email Verification",
+    content: `Dear user \n 
+    To verify your account, click on this link: \n
+    <a>http://localhost:${process.env.PORT}/auth/reset-password?token${token}</a>
+    \n
+    If you did not request for verify account, then ignore this email.
+    `,
+    user_id: seller._id,
+    link: `http://localhost:8080/auth/verify-email?token=${token}`,
+  };
+
+  const emailSave = await EmailModal.create(obj);
+
+  res.status(200).json({
+    status: "success",
+    message: "Email sent successfully",
+  });
+});
+
+const verifyEmail = asyncErrorHandler(async (req, res, next) => {
+  const tokenObj = req.tokenObj;
+  const verifySeller = await Seller.findByIdAndUpdate(
+    tokenObj.id,
+    { isEmailVerified: true },
+    { runValidators: true, new: true }
+  );
+  res.status(200).json({
+    status: "success",
+    message: "Email sent successfully",
+    data: verifySeller,
+  });
+});
+
 module.exports = {
   register,
   login,
@@ -194,4 +272,8 @@ module.exports = {
   verifyLogin,
   forgotPassword,
   emailContent,
+  emailHomeGet,
+  resetPassword,
+  sendVerificationEmail,
+  verifyEmail,
 };

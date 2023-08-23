@@ -12,4 +12,19 @@ router
 
 router.route("/forgot-password").post(authController.forgotPassword);
 
+router
+  .route("/reset-password")
+  .post(authController.verifyToken, authController.resetPassword);
+
+router.post(
+  "/send-verification-email",
+  authController.verifyToken,
+  authController.sendVerificationEmail
+);
+router.post(
+  "/verify-email",
+  authController.verifyToken,
+  authController.verifyEmail
+);
+
 module.exports = router;

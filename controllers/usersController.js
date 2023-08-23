@@ -68,12 +68,15 @@ const updateCompanyInfo = asyncErrorHandler(async (req, res, next) => {
 
   const seller = await Seller.findById({ _id: tokenObj.id });
   console.log("seller info", seller);
-  const updateData = await Org.findByIdAndUpdate(seller._org, {
-    email: email,
-    name: name,
-  });
-  const updatedData = await Org.findById(seller._org);
-  res.status(202).json(updatedData);
+  const updateData = await Org.findByIdAndUpdate(
+    seller._org,
+    {
+      email: email,
+      name: name,
+    },
+    { runValidators: true, new: true }
+  );
+  res.status(202).json(updateData);
 });
 
 const updateUserInfo = asyncErrorHandler(async (req, res, next) => {
@@ -86,38 +89,36 @@ const updateUserInfo = asyncErrorHandler(async (req, res, next) => {
       name,
       password,
     },
-    { runValidators: true }
+    { runValidators: true, new: true }
   );
-  const getData = await Seller.findById(req.params.userId);
-  if (!getData) {
+  if (!updateData) {
     return res.status(400).json({
       status: "fail",
-      message: "The user you are trying to update is not found!!! ",
+      message: "Incorrect email or password!!! ",
     });
   }
-  res.status(200).json(getData);
+  res.status(200).json(updateData);
 });
 
 const updateRole = asyncErrorHandler(async (req, res, next) => {
   const { role } = req.body;
 
+  const getData = await Seller.findById(req.params.userId);
+  if (!getData) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Incorrect email or password!!! ",
+    });
+  }
   const updateRoleData = await Seller.findByIdAndUpdate(
     req.params.userId,
     {
       role: role,
     },
-    { runValidators: true }
+    { runValidators: true, new: true }
   );
 
-  const getData = await Seller.findById(req.params.userId);
-  if (!getData) {
-    return res.status(400).json({
-      status: "fail",
-      message: "The user you are trying to update is not found!!! ",
-    });
-  }
-
-  res.status(200).json(getData);
+  res.status(200).json(updateRoleData);
 });
 
 const deleteUser = asyncErrorHandler(async (req, res, next) => {
