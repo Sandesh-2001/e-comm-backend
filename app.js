@@ -2,6 +2,9 @@ const express = require("express");
 const shopAuthRoutes = require("./routes/shopAuthRoutes");
 const userRoutes = require("./routes/userRouter");
 const emailRoutes = require("./routes/emailRoute");
+const shopSideRoutes = require("./routes/shopSideRoutes");
+const shopCustomerRoutes = require("./routes/customersRoutes");
+const sellerOrderRoutes = require("./routes/sellerOrderRoutes");
 const path = require("path");
 const multer = require("multer");
 const bodyParser = require("body-parser");
@@ -24,6 +27,9 @@ app.use("/auth", shopAuthRoutes);
 app.use("/users", userRoutes);
 app.use("/emails", emailRoutes);
 app.use("/products", productRoutes);
+app.use("/shop", shopSideRoutes);
+app.use("/customers", shopCustomerRoutes);
+app.use("/orders", sellerOrderRoutes);
 
 app.all("*", (req, res, next) => {
   const error = new CustomError(`The URL ${req.originalUrl} is not found`, 404);

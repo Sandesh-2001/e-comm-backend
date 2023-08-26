@@ -276,4 +276,5 @@ module.exports = {
   resetPassword,
   sendVerificationEmail,
   verifyEmail,
+  signToken,
 };
