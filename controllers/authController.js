@@ -6,6 +6,28 @@ const util = require("util");
 const asyncErrorHandler = require("./../utils/asyncErrorHandler");
 const CustomError = require("./../utils/customErrorHandler");
 const Email = require("./../modals/emailModal");
+const { OAuth2Client } = require("google-auth-library");
+const axios = require("axios");
+
+const client = new OAuth2Client();
+
+const verifyRecaptcha = async (response) => {
+  const secretKey = "6LcDrP0mAAAAALRFSn3BceF6Vr1nckEoyNPG1o0C";
+  try {
+    const url = `https://www.google.com/recaptcha/api/siteverify?response=${response}&secret=${process.env.CAPTCHA_SECRET_KEY}`;
+    const options = {
+      url: url,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+    const { data } = await axios(options);
+    return data;
+  } catch (error) {
+    return false;
+  }
+};
 
 const signToken = (id) => {
   const token = jwt.sign({ id }, process.env.JWT_SECRET_KEY, {
@@ -44,7 +66,14 @@ const verifyToken = asyncErrorHandler(async (req, res, next) => {
 });
 
 const register = asyncErrorHandler(async (req, res, next) => {
-  const { name, email, password, companyName } = req.body;
+  const { name, email, password, companyName, captcha } = req.body;
+
+  const reCaptchaVerification = await verifyRecaptcha(captcha);
+  console.log(reCaptchaVerification);
+  if (!reCaptchaVerification.success) {
+    let error = new CustomError("Recaptcha verification failed", 401);
+    return next(error);
+  }
 
   const orgData = await Org.create({ name: companyName, email });
 
@@ -72,7 +101,14 @@ const register = asyncErrorHandler(async (req, res, next) => {
 });
 
 const login = asyncErrorHandler(async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email, password, captcha } = req.body;
+
+  const reCaptchaVerification = await verifyRecaptcha(captcha);
+  console.log(reCaptchaVerification);
+  if (!reCaptchaVerification.success) {
+    let error = new CustomError("Recaptcha verification failed", 401);
+    return next(error);
+  }
   if (
     !email ||
     !password ||
@@ -264,6 +300,45 @@ const verifyEmail = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
+const loginWithGoogle = asyncErrorHandler(async (req, res, next) => {
+  const { email, idToken, captcha } = req.body;
+  const reCaptchaVerification = await verifyRecaptcha(captcha);
+  console.log(reCaptchaVerification);
+  if (!reCaptchaVerification.success) {
+    let error = new CustomError("Recaptcha verification failed", 401);
+    return next(error);
+  }
+
+  const ticket = await client.verifyIdToken({
+    idToken: idToken,
+    audience: process.env.GOOGLE_CLIENT_ID, // Specify the CLIENT_ID of the app that accesses the backend
+    // Or, if multiple clients access the backend:
+    //[CLIENT_ID_1, CLIENT_ID_2, CLIENT_ID_3]
+  });
+  const payload = ticket.getPayload();
+  const userid = payload["sub"];
+
+  const userData = await Seller.findOne({
+    email: email,
+  }).select("-__v");
+  if (!userData) {
+    return res.status(404).json({
+      status: "fail",
+      message: `Incorrect email or password!!!`,
+    });
+  }
+  const orgData = await Org.findById({ _id: userData._org }).select("-__v");
+  const token = signToken(userData._id);
+  const expiresIn = new Date(Date.now() + 10 * 60 * 60 * 1000).toISOString();
+  const data = { ...userData._doc, _org: orgData };
+  res.status(200).json({
+    status: "success",
+    token: token,
+    expiresIn,
+    user: data,
+  });
+});
+
 module.exports = {
   register,
   login,
@@ -278,4 +353,5 @@ module.exports = {
   sendVerificationEmail,
   verifyEmail,
   signToken,
+  loginWithGoogle,
 };
