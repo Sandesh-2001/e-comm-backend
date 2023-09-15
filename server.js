@@ -7,7 +7,7 @@ dotevn.config({ path: "./config.env" });
 mongoose
   .connect(process.env.LOCAL_CONN_STR, {
     useNewUrlParser: true,
-    dbName: "e-comm_backend",
+    dbName: "E-comm-backend-new",
   })
   .then((conn) => {
     console.log("DB connection success...");

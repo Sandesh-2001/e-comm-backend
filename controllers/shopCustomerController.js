@@ -23,8 +23,17 @@ const updateCustomerProfile = asyncErrorHandler(async (req, res, next) => {
 
 const updateCustomerPicture = asyncErrorHandler(async (req, res, next) => {
   const tokenObj = req.tokenObj;
-  console.log(req.file);
-  const pictureUrl = `http://localhost:${process.env.PORT}/customer/${req.file.path}`;
+  const previousData = await Customer.findById(tokenObj.id);
+  let str = previousData.picture;
+  let index = str.indexOf("customer");
+  if (index !== -1) {
+    let pre = str.substring(+index + 10);
+    console.log(pre);
+
+    fs.unlinkSync("upload/profile_img/" + pre);
+  }
+
+  const pictureUrl = `http://localhost:${process.env.PORT}/customers/${req.file.filename}`;
   const updateData = await Customer.findByIdAndUpdate(tokenObj.id, {
     picture: pictureUrl,
   });
@@ -37,17 +46,20 @@ const updateCustomerPicture = asyncErrorHandler(async (req, res, next) => {
 const deleteProfilePicture = asyncErrorHandler(async (req, res, next) => {
   const tokenObj = req.tokenObj;
   const customerData = await Customer.findByIdAndUpdate(tokenObj.id, {
-    picture: "",
+    picture:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSg-z5yd8c2ukIWdDLepcCRumTuC4Mlfx7hGA&usqp=CAU",
   });
 
   const picture = customerData.picture;
   console.log("picture", picture);
   const index = picture.indexOf("picture_");
-  const pictureData = picture.substring(index);
-  console.log(pictureData + "this is picture data");
-  fs.unlinkSync("upload/profile_img/" + pictureData, (err) => {
-    return res.status(400).json({ message: err.message });
-  });
+  if (index !== -1) {
+    const pictureData = picture.substring(index);
+    console.log(pictureData + "this is picture data");
+    fs.unlinkSync("upload/profile_img/" + pictureData, (err) => {
+      return res.status(400).json({ message: err.message });
+    });
+  }
 
   res.status(200).json({
     message: "Profile image is deleted Successfully",
@@ -58,7 +70,10 @@ const getSavedAddress = asyncErrorHandler(async (req, res, next) => {
   const tokenObj = req.tokenObj;
   const customerData = await Customer.findById(tokenObj.id);
   const addresses = customerData.address;
-  res.status(200).json(addresses);
+  res.status(200).json({
+    status: "success",
+    results: addresses,
+  });
 });
 
 const addAddress = asyncErrorHandler(async (req, res, next) => {

@@ -26,6 +26,8 @@ const customerRegistration = asyncErrorHandler(async (req, res, next) => {
     email,
     password,
     address,
+    picture:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSg-z5yd8c2ukIWdDLepcCRumTuC4Mlfx7hGA&usqp=CAU",
   };
 
   const registerCustomer = await Customer.create(data);
@@ -45,11 +47,7 @@ const customerLogin = asyncErrorHandler(async (req, res, next) => {
     password,
   });
   if (!customerData) {
-    return next(
-      new CustomError(
-        `The ${email} is not registered. Please register first!!!`
-      )
-    );
+    return next(new CustomError(`Incorrect email or password`));
   }
   token = authController.signToken(customerData._id);
   res.status(200).json({

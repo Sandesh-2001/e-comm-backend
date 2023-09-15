@@ -6,9 +6,11 @@ const path = require("path");
 const fs = require("fs");
 const Apifeatures = require("./../utils/ApiFeatures");
 const CustomError = require("../utils/customErrorHandler");
+const { json } = require("body-parser");
 
 const createProduct = asyncErrorHandler(async (req, res, next) => {
-  console.log(req.files);
+  console.log("this is request files");
+  console.log(req.body);
   const tokenObj = req.tokenObj;
   const seller = await Seller.findById(tokenObj.id);
   const org = await Org.findById(seller._org);
@@ -50,16 +52,20 @@ const getOneProduct = asyncErrorHandler(async (req, res, next) => {
 
 const listOfProduct = asyncErrorHandler(async (req, res, next) => {
   const tokenObj = req.tokenObj;
-  const { page, limit } = req.query;
+  console.log(req.query);
+  const { page = 1, limit = 5, sort = "-createdAt", search = "" } = req.query;
+  console.log(sort);
   const allDoc = await Product.find({ sellerId: tokenObj.id });
-  const features = new Apifeatures(
-    Product.find({ sellerId: tokenObj.id }),
-    req.query
-  )
-    .sort()
-    .filter()
-    .paginate();
-  const product = await features.query;
+  const features = await Product.find({
+    sellerId: tokenObj.id,
+    name: { $regex: search, $options: "i" },
+  })
+    .limit(limit)
+    .skip((page - 1) * limit)
+    .sort(sort);
+
+  const product = features;
+  console.log(product);
   res.status(200).json({
     status: "success",
     results: product,
@@ -86,15 +92,20 @@ const updateProduct = asyncErrorHandler(async (req, res, next) => {
 });
 
 const updateProdImages = asyncErrorHandler(async (req, res, next) => {
+  const { new_images } = req.body;
+
   const files = req.files;
   let deleteImages = [];
-  deleteImages = JSON.parse(req.body.delete);
-  console.log(req.params.productId);
+  deleteImages = req.body.delete || [];
+
+  console.log("delete imgaes are");
+  console.log(deleteImages);
+
+  console.log(JSON.parse(deleteImages[0])["public_id"]);
   const product = await Product.find({ _id: req.params.productId });
-  console.log(product);
   let imagesFromMongo = [];
   imagesFromMongo = product[0].images;
-  console.log(product[0].images);
+  console.log(req.files);
   req.files.forEach((data) => {
     let obj = {
       public_id: data.filename,
@@ -102,41 +113,163 @@ const updateProdImages = asyncErrorHandler(async (req, res, next) => {
     };
     imagesFromMongo.push(obj);
   });
+  console.log(imagesFromMongo);
 
-  let imgs = [];
-
-  imgs = imagesFromMongo.filter((data) => {
-    for (let i = 0; i < deleteImages.length; i++) {
-      if (data.public_id !== deleteImages[i].public_id) {
-        return data;
+  let uImgs = [];
+  for (let i = 0; i < imagesFromMongo.length; i++) {
+    if (deleteImages.length !== 0) {
+      inner: for (let j = 0; j < deleteImages?.length; j++) {
+        if (
+          imagesFromMongo[i].public_id !==
+          JSON.parse(deleteImages[j])["public_id"]
+        ) {
+          uImgs.push(imagesFromMongo[i]);
+          break inner;
+        }
       }
+    } else {
+      uImgs.push(imagesFromMongo[i]);
     }
-  });
-  console.log(imgs);
+  }
+  console.log("u imgs");
+  console.log(uImgs);
+  // let newImg = [];
+  // imagesFromMongo.forEach((data) => {
+  //   deleteImages.forEach((img) => {
+  //     if (data.public_id !== JSON.parse(img)["public_id"]) {
+  //       newImg.push(data);
+  //     }
+  //   });
+  // });
+
   const updatedProduct = await Product.findByIdAndUpdate(
     req.params.productId,
-    { images: imgs },
+    { images: uImgs },
     { runValidators: true, new: true }
   );
-  console.log(imgs);
-
-  deleteImages.forEach((data) => {
-    console.log(data);
-    fs.unlinkSync(`upload/product_img/${data.public_id}`, function (err) {
-      if (err) {
-        const error = new CustomError(
-          "Error occurred while deleting product images",
-          400
-        );
-        return next(error);
+  newImg = [];
+  for (let i = 0; i < deleteImages?.length; i++) {
+    fs.unlinkSync(
+      `upload/product_img/${JSON.parse(deleteImages[i])["public_id"]}`,
+      function (err) {
+        if (err) {
+          const error = new CustomError(
+            "Error occurred while deleting product images",
+            400
+          );
+          return next(error);
+        }
       }
-    });
-  });
+    );
+  }
 
   res.status(200).json({
     status: "success",
     results: updatedProduct,
   });
+});
+
+const updateProductImages = asyncErrorHandler(async (req, res, next) => {
+  var deleteImages = { ...req.body };
+  let k = deleteImages.delete;
+  let isArray = Array.isArray(k);
+  console.log("type of k" + Array.isArray(k));
+  if (isArray) {
+    let abc = [];
+
+    for (var i of deleteImages.delete) {
+      console.log("i is");
+      console.log(k);
+      abc.push(JSON.parse(i || "{}"));
+    }
+    deleteImages = [...abc];
+    console.log(deleteImages);
+  } else {
+    deleteImages = JSON.parse(k || "{}") || "{}";
+    console.log("delete images are", deleteImages);
+  }
+
+  let newImages = [];
+  // console.log(JSON.parse(deleteImages[0])?.public_id);
+
+  const product = await Product.findById(req.params.productId);
+  let previousImages = product.images || [];
+  // console.log(previousImages);
+  // new images
+  req.files.forEach((data) => {
+    let obj = {
+      public_id: data.filename,
+      url: `http://localhost:${process.env.PORT}/products/${data.filename}`,
+    };
+    previousImages.push(obj);
+  });
+  // adding new images end
+  // deleting the images
+  console.log(deleteImages.length);
+  let flag = false;
+  if (deleteImages.length === 0) {
+    newImages = previousImages;
+  } else {
+    for (let j = 0; j < previousImages.length; j++) {
+      // console.log(previousImages[j]["public_id"]);
+      flag = false;
+      if (isArray) {
+        for (let i = 0; i < deleteImages.length; i++) {
+          let match = deleteImages[i]["public_id"];
+          console.log("MATCH", match);
+          if (previousImages[j]["public_id"] === match) {
+            fs.unlinkSync(`upload/product_img/${match}`, function (err) {
+              if (err) {
+                const error = new CustomError(
+                  "Error occurred while deleting product images",
+                  400
+                );
+                return next(error);
+              }
+            });
+            flag = true;
+            break;
+          }
+        }
+      } else {
+        if (previousImages[j].public_id === deleteImages.public_id) {
+          flag = true;
+        }
+      }
+      if (!flag) {
+        newImages.push(previousImages[j]);
+      }
+    }
+  }
+
+  // deleting the images complete
+
+  let productData = await Product.findByIdAndUpdate(
+    req.params.productId,
+    {
+      images: newImages,
+    },
+    { runValidators: true, new: true }
+  );
+
+  // for (let i = 0; i < deleteImages.length; i++) {
+  //   fs.unlinkSync(
+  //     `upload/product_img/${JSON.parse(deleteImages[i])["public_id"]}`,
+  //     function (err) {
+  //       if (err) {
+  //         const error = new CustomError(
+  //           "Error occurred while deleting product images",
+  //           400
+  //         );
+  //         return next(error);
+  //       }
+  //     }
+  //   );
+  // }
+
+  res.status(200).json({ result: productData });
+
+  // console.log(previousImages);
 });
 
 const deleteProduct = asyncErrorHandler(async (req, res, next) => {
@@ -155,4 +288,5 @@ module.exports = {
   updateProduct,
   deleteProduct,
   updateProdImages,
+  updateProductImages,
 };

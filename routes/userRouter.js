@@ -10,7 +10,10 @@ router
   .post(usersController.createUser)
   .get(usersController.getAllUsers);
 
-router.route("/org").patch(usersController.updateCompanyInfo);
+router
+  .route("/org")
+  .patch(usersController.updateCompanyInfo)
+  .get(usersController.getOrg);
 
 router
   .route("/:userId")

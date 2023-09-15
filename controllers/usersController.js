@@ -34,24 +34,45 @@ const createUser = asyncErrorHandler(async (req, res, next) => {
 
 const getAllUsers = asyncErrorHandler(async (req, res, next) => {
   const tokenObj = req.tokenObj;
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10, search = "", sort = "-createdAt" } = req.query;
+  // const search = req.params.search || "";
+
+  console.log("search data is", search);
   const sellers = await Seller.findById({ _id: tokenObj.id });
   const allData = await Seller.find({ _org: sellers._org });
-  const features = new ApiFeatures(
-    Seller.find({ _org: sellers._org }),
-    req.query
-  )
-    .paginate()
-    .sort()
-    .filter();
-  const userData = await features.query;
-  const orgData = await Org.findById(sellers._org);
   const totalResults = allData.length;
+  if (search.length > 0) {
+    const searchSeller = await Seller.find({
+      _org: sellers._org,
+      name: { $regex: search, $options: "i" },
+    })
+      .limit(10)
+      .skip((page - 1) * limit)
+      .sort(sort);
+
+    let totalResults = searchSeller.length;
+
+    return res.status(200).json({
+      results: searchSeller,
+      page: page,
+      limit: limit,
+      totalResults: totalResults,
+      totalPages: Math.ceil(totalResults / limit),
+    });
+  }
+  console.log("reached here");
+  const features = await Seller.find({ _org: sellers._org })
+    .limit(10)
+    .skip((page - 1) * limit)
+    .sort(sort);
+
+  const userData = features;
+  const orgData = await Org.findById(sellers._org);
   const data = userData.map((data) => {
     let obj = { ...data._doc, _org: orgData };
     return obj;
   });
-  console.log("data is", allData);
+  // console.log("data is", userData);
 
   res.status(200).json({
     results: data,
@@ -59,6 +80,14 @@ const getAllUsers = asyncErrorHandler(async (req, res, next) => {
     limit: limit,
     totalResults: totalResults,
     totalPages: Math.ceil(totalResults / limit),
+  });
+});
+
+const getOrg = asyncErrorHandler(async (req, res, next) => {
+  const seller = await Seller.findById(req.tokenObj.id);
+  const org = await Org.findById(seller._org);
+  res.status(200).json({
+    org,
   });
 });
 
@@ -133,6 +162,7 @@ const deleteUser = asyncErrorHandler(async (req, res, next) => {
 module.exports = {
   createUser,
   getAllUsers,
+  getOrg,
   updateCompanyInfo,
   updateUserInfo,
   updateRole,

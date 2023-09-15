@@ -57,6 +57,16 @@ class ApiFeatures {
     // }
     return this;
   }
+  search() {
+    console.log("this is query");
+    // console.log(this.query);
+    
+    let search = this.queryStr.search || "";
+    console.log(this.queryStr);
+    let querySearch = { name: { $regex: search, options: "i" } };
+    this.query = this.query.find(querySearch);
+    return this;
+  }
 }
 
 module.exports = ApiFeatures;

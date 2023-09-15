@@ -7,13 +7,15 @@ router.use("/product-img", express.static("upload/product_img"));
 router.use(express.json());
 
 router.use("/", express.static("upload/product_img"));
-
+router.use(express.json());
 const storage = multer.diskStorage({
   destination: "./upload/product_img",
   filename: (req, file, cb) => {
     return cb(
       null,
-      `${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`
+      `${file.fieldname}_${Date.now()}${Math.random()}${path.extname(
+        file.originalname
+      )}`
     );
   },
 });
@@ -36,7 +38,7 @@ router
 
 router
   .route("/:productId")
-  .get(authController.verifyToken, productController.getOneProduct)
+  .get(productController.getOneProduct)
   .patch(authController.verifyToken, productController.updateProduct)
   .delete(authController.verifyToken, productController.deleteProduct);
 
@@ -45,6 +47,6 @@ router
   .patch(
     authController.verifyToken,
     upload.array("new_images", 20),
-    productController.updateProdImages
+    productController.updateProductImages
   );
 module.exports = router;

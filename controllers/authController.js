@@ -15,6 +15,7 @@ const signToken = (id) => {
 };
 
 const verifyToken = asyncErrorHandler(async (req, res, next) => {
+  console.log(req.headers.authorization);
   const rawToken = req.headers.authorization || req.query.token;
   // console.log("Authorization token is", token);
   let token1;
@@ -175,12 +176,12 @@ const forgotPassword = asyncErrorHandler(async (req, res, next) => {
     subject: "Forgot Password",
     content: `Dear user \n 
     To reset your password, click on this link: \n
-    <a>http://localhost:${process.env.PORT}/auth/reset-password?token${token}</a>
+    <a>${process.env.MAIL_LINK_START}/auth/reset-password?token${token}</a>
     \n
     If you did not request any password resets, then ignore this email.
     `,
     user_id: seller._id,
-    link: `http://localhost:8080/auth/reset-password?token=${token}`,
+    link: `${process.env.MAIL_LINK_START}/auth/reset-password?token=${token}`,
   };
 
   const emailSave = await EmailModal.create(obj);
@@ -233,12 +234,12 @@ const sendVerificationEmail = asyncErrorHandler(async (req, res, next) => {
     subject: "Email Verification",
     content: `Dear user \n 
     To verify your account, click on this link: \n
-    <a>http://localhost:${process.env.PORT}/auth/reset-password?token${token}</a>
+    <a>${process.env.MAIL_LINK_START}/auth/reset-password?token${token}</a>
     \n
     If you did not request for verify account, then ignore this email.
     `,
     user_id: seller._id,
-    link: `http://localhost:8080/auth/verify-email?token=${token}`,
+    link: `${process.env.MAIL_LINK_START}/auth/verify-email?token=${token}`,
   };
 
   const emailSave = await EmailModal.create(obj);

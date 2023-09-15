@@ -10,10 +10,12 @@ const multer = require("multer");
 const bodyParser = require("body-parser");
 const errorHandler = require("./controllers/errorController");
 const passport = require("passport");
+const cors = require("cors");
 const app = express();
 const productRoutes = require("./routes/productRoute");
 
 const CustomError = require("./utils/customErrorHandler");
+app.use(cors());
 
 app.use(bodyParser.urlencoded({ extended: true }));
 //We need to add this lines to use EJS

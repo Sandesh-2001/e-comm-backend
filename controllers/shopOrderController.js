@@ -11,7 +11,8 @@ const createOrder = asyncErrorHandler(async (req, res, next) => {
   const order = await Order.create(data);
 
   res.status(200).json({
-    order: order,
+    status: "success",
+    result: order,
   });
 });
 

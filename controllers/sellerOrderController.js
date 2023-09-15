@@ -45,6 +45,10 @@ const orderAction = asyncErrorHandler(async (req, res, next) => {
     );
     return next(error);
   }
+  if (orderData.status === "Cancelled") {
+    let e = new CustomError("The order is already cancelled", 401);
+    return next(e);
+  }
   const updatedData = await Order.findByIdAndUpdate(req.params.orderId, {
     status: req.params.action,
   });
