@@ -9,8 +9,7 @@ const CustomError = require("../utils/customErrorHandler");
 const { json } = require("body-parser");
 
 const createProduct = asyncErrorHandler(async (req, res, next) => {
-  console.log("this is request files");
-  console.log(req.body);
+
   const tokenObj = req.tokenObj;
   const seller = await Seller.findById(tokenObj.id);
   const org = await Org.findById(seller._org);
@@ -42,7 +41,6 @@ const createProduct = asyncErrorHandler(async (req, res, next) => {
 
 const getOneProduct = asyncErrorHandler(async (req, res, next) => {
   const productId = req.params.productId;
-  console.log(req.params);
   const productData = await Product.findById(productId);
   res.status(200).json({
     status: "success",
@@ -52,9 +50,7 @@ const getOneProduct = asyncErrorHandler(async (req, res, next) => {
 
 const listOfProduct = asyncErrorHandler(async (req, res, next) => {
   const tokenObj = req.tokenObj;
-  console.log(req.query);
   const { page = 1, limit = 5, sort = "-createdAt", search = "" } = req.query;
-  console.log(sort);
   const allDoc = await Product.find({ sellerId: tokenObj.id });
   const features = await Product.find({
     sellerId: tokenObj.id,
@@ -65,7 +61,6 @@ const listOfProduct = asyncErrorHandler(async (req, res, next) => {
     .sort(sort);
 
   const product = features;
-  console.log(product);
   res.status(200).json({
     status: "success",
     results: product,
@@ -98,14 +93,9 @@ const updateProdImages = asyncErrorHandler(async (req, res, next) => {
   let deleteImages = [];
   deleteImages = req.body.delete || [];
 
-  console.log("delete imgaes are");
-  console.log(deleteImages);
-
-  console.log(JSON.parse(deleteImages[0])["public_id"]);
   const product = await Product.find({ _id: req.params.productId });
   let imagesFromMongo = [];
   imagesFromMongo = product[0].images;
-  console.log(req.files);
   req.files.forEach((data) => {
     let obj = {
       public_id: data.filename,
@@ -113,7 +103,6 @@ const updateProdImages = asyncErrorHandler(async (req, res, next) => {
     };
     imagesFromMongo.push(obj);
   });
-  console.log(imagesFromMongo);
 
   let uImgs = [];
   for (let i = 0; i < imagesFromMongo.length; i++) {
@@ -131,8 +120,7 @@ const updateProdImages = asyncErrorHandler(async (req, res, next) => {
       uImgs.push(imagesFromMongo[i]);
     }
   }
-  console.log("u imgs");
-  console.log(uImgs);
+
   // let newImg = [];
   // imagesFromMongo.forEach((data) => {
   //   deleteImages.forEach((img) => {
@@ -173,28 +161,22 @@ const updateProductImages = asyncErrorHandler(async (req, res, next) => {
   var deleteImages = { ...req.body };
   let k = deleteImages.delete;
   let isArray = Array.isArray(k);
-  console.log("type of k" + Array.isArray(k));
   if (isArray) {
     let abc = [];
 
     for (var i of deleteImages.delete) {
-      console.log("i is");
-      console.log(k);
+     
       abc.push(JSON.parse(i || "{}"));
     }
     deleteImages = [...abc];
-    console.log(deleteImages);
   } else {
     deleteImages = JSON.parse(k || "{}") || "{}";
-    console.log("delete images are", deleteImages);
   }
 
   let newImages = [];
-  // console.log(JSON.parse(deleteImages[0])?.public_id);
 
   const product = await Product.findById(req.params.productId);
   let previousImages = product.images || [];
-  // console.log(previousImages);
   // new images
   req.files.forEach((data) => {
     let obj = {
@@ -205,18 +187,15 @@ const updateProductImages = asyncErrorHandler(async (req, res, next) => {
   });
   // adding new images end
   // deleting the images
-  console.log(deleteImages.length);
   let flag = false;
   if (deleteImages.length === 0) {
     newImages = previousImages;
   } else {
     for (let j = 0; j < previousImages.length; j++) {
-      // console.log(previousImages[j]["public_id"]);
       flag = false;
       if (isArray) {
         for (let i = 0; i < deleteImages.length; i++) {
           let match = deleteImages[i]["public_id"];
-          console.log("MATCH", match);
           if (previousImages[j]["public_id"] === match) {
             fs.unlinkSync(`upload/product_img/${match}`, function (err) {
               if (err) {
@@ -269,7 +248,6 @@ const updateProductImages = asyncErrorHandler(async (req, res, next) => {
 
   res.status(200).json({ result: productData });
 
-  // console.log(previousImages);
 });
 
 const deleteProduct = asyncErrorHandler(async (req, res, next) => {

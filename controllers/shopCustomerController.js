@@ -28,7 +28,6 @@ const updateCustomerPicture = asyncErrorHandler(async (req, res, next) => {
   let index = str.indexOf("customer");
   if (index !== -1) {
     let pre = str.substring(+index + 10);
-    console.log(pre);
 
     fs.unlinkSync("upload/profile_img/" + pre);
   }
@@ -51,11 +50,11 @@ const deleteProfilePicture = asyncErrorHandler(async (req, res, next) => {
   });
 
   const picture = customerData.picture;
-  console.log("picture", picture);
+
   const index = picture.indexOf("picture_");
   if (index !== -1) {
     const pictureData = picture.substring(index);
-    console.log(pictureData + "this is picture data");
+
     fs.unlinkSync("upload/profile_img/" + pictureData, (err) => {
       return res.status(400).json({ message: err.message });
     });

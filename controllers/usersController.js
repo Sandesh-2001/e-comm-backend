@@ -22,7 +22,7 @@ const createUser = asyncErrorHandler(async (req, res, next) => {
     role,
     _org: sellerData._org,
   };
-  console.log("hii");
+
 
   const sellerData1 = await Seller.create(user);
   const orgData = await Org.findById(sellerData._org);
@@ -35,9 +35,7 @@ const createUser = asyncErrorHandler(async (req, res, next) => {
 const getAllUsers = asyncErrorHandler(async (req, res, next) => {
   const tokenObj = req.tokenObj;
   const { page = 1, limit = 10, search = "", sort = "-createdAt" } = req.query;
-  // const search = req.params.search || "";
 
-  console.log("search data is", search);
   const sellers = await Seller.findById({ _id: tokenObj.id });
   const allData = await Seller.find({ _org: sellers._org });
   const totalResults = allData.length;
@@ -60,7 +58,7 @@ const getAllUsers = asyncErrorHandler(async (req, res, next) => {
       totalPages: Math.ceil(totalResults / limit),
     });
   }
-  console.log("reached here");
+
   const features = await Seller.find({ _org: sellers._org })
     .limit(10)
     .skip((page - 1) * limit)
@@ -72,7 +70,7 @@ const getAllUsers = asyncErrorHandler(async (req, res, next) => {
     let obj = { ...data._doc, _org: orgData };
     return obj;
   });
-  // console.log("data is", userData);
+
 
   res.status(200).json({
     results: data,
@@ -96,7 +94,7 @@ const updateCompanyInfo = asyncErrorHandler(async (req, res, next) => {
   const { email, name } = req.body;
 
   const seller = await Seller.findById({ _id: tokenObj.id });
-  console.log("seller info", seller);
+
   const updateData = await Org.findByIdAndUpdate(
     seller._org,
     {

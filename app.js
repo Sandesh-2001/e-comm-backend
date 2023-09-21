@@ -23,6 +23,11 @@ app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 app.use(express.static("./public"));
 
+app.get("/invoice-pdf", function (req, res) {
+  console.log(__dirname);
+  res.sendFile(__dirname + "/my-invoice.pdf");
+});
+
 app.use(express.json());
 
 app.use("/auth", shopAuthRoutes);

@@ -19,7 +19,7 @@ passport.deserializeUser(function (user, done) {
 //       passReqToCallback: true,
 //     },
 //     function (request, accessToken, refreshToken, profile, done) {
-//       console.log(profile);
+//     
 //       return done(null, profile);
 //     }
 //   )

@@ -15,4 +15,6 @@ router.patch("/cancel/:orderId", orderControllers.cancelOrder);
 
 router.put("/confirm/:orderId", orderControllers.makePayment);
 
+router.post("/invoice-pdf/:orderId", orderControllers.orderInvoice);
+
 module.exports = router;

@@ -5,7 +5,7 @@ class ApiFeatures {
     this.queryStr = queryStr;
   }
   filter() {
-    console.log("query is" + this.query);
+
     const excludeFields = ["sort", "page", "limit", "fields"];
     let queryObj = { ...this.queryStr };
     excludeFields.forEach((el) => {
@@ -21,7 +21,7 @@ class ApiFeatures {
   sort() {
     if (this.queryStr.sort) {
       const sortBy = this.queryStr.sort.split(",").join(" ");
-      console.log("sort by " + sortBy);
+   
       this.query = this.query.sort(sortBy);
     } else {
       this.query = this.query.sort("-createdAt");
@@ -33,7 +33,7 @@ class ApiFeatures {
   limitFields() {
     if (this.queryStr.fields) {
       const fields = this.queryStr.fields.split(",").join(" ");
-      console.log("limit called" + fields);
+
 
       this.query = this.query.select(fields);
     } else {
@@ -43,26 +43,19 @@ class ApiFeatures {
   }
 
   paginate() {
-    console.log(this.queryStr + "query str");
+
     const page = this.queryStr.page * 1 || 1;
     const limit = this.queryStr.limit * 1 || 10;
     const skip = (page - 1) * limit;
 
     this.query = this.query.skip(skip).limit(limit);
-    // if (this.queryStr.page) {
-    //   const moviesCount = await Movie.countDocuments();
-    //   if (skip >= moviesCount) {
-    //     throw new Error("This page is not found!!!");
-    //   }
-    // }
+ 
     return this;
   }
   search() {
-    console.log("this is query");
-    // console.log(this.query);
-    
+   
     let search = this.queryStr.search || "";
-    console.log(this.queryStr);
+  
     let querySearch = { name: { $regex: search, options: "i" } };
     this.query = this.query.find(querySearch);
     return this;

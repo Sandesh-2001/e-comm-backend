@@ -37,9 +37,7 @@ const signToken = (id) => {
 };
 
 const verifyToken = asyncErrorHandler(async (req, res, next) => {
-  console.log(req.headers.authorization);
   const rawToken = req.headers.authorization || req.query.token;
-  // console.log("Authorization token is", token);
   let token1;
   if (!req.query.token) {
     if (rawToken && rawToken.startsWith("Bearer")) {
@@ -57,7 +55,6 @@ const verifyToken = asyncErrorHandler(async (req, res, next) => {
     token1,
     process.env.JWT_SECRET_KEY
   );
-  console.log(tokenObj, "token object is" + Date.now());
   if (tokenObj.exp <= Date.now()) {
   }
   req.tokenObj = tokenObj;
@@ -69,11 +66,10 @@ const register = asyncErrorHandler(async (req, res, next) => {
   const { name, email, password, companyName, captcha } = req.body;
 
   const reCaptchaVerification = await verifyRecaptcha(captcha);
-  console.log(reCaptchaVerification);
-  if (!reCaptchaVerification.success) {
-    let error = new CustomError("Recaptcha verification failed", 401);
-    return next(error);
-  }
+  // if (!reCaptchaVerification.success) {
+  //   let error = new CustomError("Recaptcha verification failed", 401);
+  //   return next(error);
+  // }
 
   const orgData = await Org.create({ name: companyName, email });
 
@@ -88,9 +84,7 @@ const register = asyncErrorHandler(async (req, res, next) => {
   userData["_org"] = orgData;
 
   let data = { ...userData._doc, _org: orgData };
-  console.log(
-    "org data is" + orgData + "and userdata" + userData + "data is" + data
-  );
+
   const token = signToken(userData._id);
   const expiresIn = new Date(Date.now() + 10 * 60 * 60 * 1000).toISOString();
   res.status(201).json({
@@ -102,13 +96,12 @@ const register = asyncErrorHandler(async (req, res, next) => {
 
 const login = asyncErrorHandler(async (req, res, next) => {
   const { email, password, captcha } = req.body;
-
+  console.log(req.body);
   const reCaptchaVerification = await verifyRecaptcha(captcha);
-  console.log(reCaptchaVerification);
-  if (!reCaptchaVerification.success) {
-    let error = new CustomError("Recaptcha verification failed", 401);
-    return next(error);
-  }
+  // if (!reCaptchaVerification.success) {
+  //   let error = new CustomError("Recaptcha verification failed", 401);
+  //   return next(error);
+  // }
   if (
     !email ||
     !password ||
@@ -157,7 +150,6 @@ const changePassword = asyncErrorHandler(async (req, res, next) => {
   const tokenObj = req.tokenObj;
 
   const changeRequest = await Seller.findById(tokenObj.id).select("+password");
-  console.log("change request", changeRequest);
   if (changeRequest.password === old_password) {
     const updatePassword = await Seller.findByIdAndUpdate(
       tokenObj.id,
@@ -181,7 +173,6 @@ const changePassword = asyncErrorHandler(async (req, res, next) => {
 const verifyLogin = asyncErrorHandler(async (req, res, next) => {
   const email = req.body.email;
   const seller = await Seller.findOne({ email: email });
-  console.log("email is" + seller);
 
   if (!seller) {
     return res.json({
@@ -235,7 +226,6 @@ const emailContent = asyncErrorHandler(async (req, res, next) => {
 });
 
 const emailHomeGet = asyncErrorHandler(async (req, res, next) => {
-  console.log("this is requested email", req.userEmail);
   res.render("./../views/templates/emailHome.ejs", {
     emails: req.emails,
     userEmail: req.userEmail,
@@ -244,10 +234,8 @@ const emailHomeGet = asyncErrorHandler(async (req, res, next) => {
 
 const resetPassword = asyncErrorHandler(async (req, res, next) => {
   const { email, password, captcha } = req.body;
-  console.log(req.query.token, "request params is");
   const verifyToken = jwt.verify(req.query.token, process.env.JWT_SECRET_KEY);
 
-  console.log("verify token is ", verifyToken);
   const sellerUpdate = await Seller.findByIdAndUpdate(
     verifyToken.id,
     { password: password },
@@ -303,11 +291,10 @@ const verifyEmail = asyncErrorHandler(async (req, res, next) => {
 const loginWithGoogle = asyncErrorHandler(async (req, res, next) => {
   const { email, idToken, captcha } = req.body;
   const reCaptchaVerification = await verifyRecaptcha(captcha);
-  console.log(reCaptchaVerification);
-  if (!reCaptchaVerification.success) {
-    let error = new CustomError("Recaptcha verification failed", 401);
-    return next(error);
-  }
+  // if (!reCaptchaVerification.success) {
+  //   let error = new CustomError("Recaptcha verification failed", 401);
+  //   return next(error);
+  // }
 
   const ticket = await client.verifyIdToken({
     idToken: idToken,

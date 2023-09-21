@@ -3,6 +3,11 @@ const Order = require("./../modals/orderModel");
 const Payment = require("./../modals/paymentModel");
 const Product = require("./../modals/productsModal");
 const ApiFeatures = require("./../utils/ApiFeatures");
+const puppeteer = require("puppeteer");
+const hbs = require("handlebars");
+const fs = require("fs");
+const path = require("path");
+const { json } = require("body-parser");
 const createOrder = asyncErrorHandler(async (req, res, next) => {
   const userId = req.tokenObj.id;
 
@@ -72,8 +77,6 @@ const makePayment = asyncErrorHandler(async (req, res, next) => {
     getRandomLetter() +
     getRandomLetter();
 
-  console.log("transaction id is   ", transactionId);
-
   const orderId = req.params.orderId;
 
   const order = await Order.findById(orderId);
@@ -93,11 +96,7 @@ const makePayment = asyncErrorHandler(async (req, res, next) => {
     } else {
       or: for (let j = 0; j < ordersArray.length; j++) {
         for (let k = 0; k < ordersArray[j].length; k++) {
-          console.log(ordersArray[j][k].sellerId);
-          console.log("hi");
-          console.log(productSellerId.toString());
           if (ordersArray[j][k].sellerId === productSellerId) {
-            console.log("hello");
             let obj = { ...orderItems[i]._doc, sellerId: productSellerId };
 
             ordersArray[j].push(obj);
@@ -105,7 +104,7 @@ const makePayment = asyncErrorHandler(async (req, res, next) => {
           }
         }
       }
-      console.log;
+
       let newArr = [];
       let obj = { ...orderItems[i]._doc, sellerId: productSellerId };
       newArr.push(obj);
@@ -129,12 +128,9 @@ const makePayment = asyncErrorHandler(async (req, res, next) => {
     };
     delete object["_id"];
     object.sellerId = sellerId;
-    console.log(object);
+
     await Order.create(object);
   }
-
-  // console.log("orders");
-  // console.log(ordersArray);
 
   await Order.findByIdAndDelete(orderId);
   res.status(200).json({
@@ -148,7 +144,7 @@ const getAllOrders = asyncErrorHandler(async (req, res, next) => {
     createdBy: req.tokenObj.id,
   });
   let count = allOrdersCount.length;
-  console.log(count);
+
   const { page = 1, limit = 5 } = req.query;
   const features = new ApiFeatures(
     Order.find({ createdBy: req.tokenObj.id }),
@@ -189,10 +185,67 @@ const cancelOrder = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
+const compile = async (templateName, data) => {
+  const filePath = path.join(
+    process.cwd(),
+    "views/templates",
+    `${templateName}.ejs`
+  );
+  let aa;
+  const a = fs.readFile(filePath, "utf-8", (err, html) => {
+    aa = html;
+    return html;
+  });
+  console.log(aa);
+  console.log("hey");
+  return aa;
+};
+
+const orderInvoice = asyncErrorHandler(async (req, res, next) => {
+  const orderId = req.params.orderId;
+  console.log(orderId);
+  const orderDetails = await Order.findById(orderId);
+  console.log(orderDetails);
+  const data = JSON.parse(JSON.stringify(orderDetails));
+  let templateName = "orderInvoice";
+  const filePath = path.join(
+    process.cwd(),
+    "views/templates",
+    `${templateName}.hbs`
+  );
+  let invoicePage;
+  fs.readFile(filePath, "utf-8", async (err, html) => {
+    let content = hbs.compile(html)({ order: data });
+
+    const browser = await puppeteer.launch({ headless: "new" });
+    const page = await browser.newPage();
+
+    await page.setContent(content);
+    await page.emulateMediaType("screen");
+
+    invoicePage = await page.pdf({
+      path: "my-invoice.pdf",
+      format: "A4",
+      printBackground: true,
+    });
+  });
+
+  console.log("done");
+  console.log(invoicePage);
+  return res.status(200).json({ message: "done" });
+  // await process.exit();
+});
+
+const hello = async (req, res, next) => {
+  res.json("hello");
+};
+
 module.exports = {
   createOrder,
   makePayment,
   getAllOrders,
   getSpecificOrder,
   cancelOrder,
+  orderInvoice,
+  hello,
 };
