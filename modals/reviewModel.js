@@ -5,8 +5,11 @@ const reviewSchema = mongoose.Schema({
   caption: String,
   customer_name: String,
   customer_photo: String,
-  customer_id: mongoose.Schema.Types.ObjectId,
-  product_id: mongoose.Schema.Types.ObjectId,
+  customer_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "shopcustomer",
+  },
+  product_id: { type: mongoose.Schema.Types.ObjectId, ref: "product" },
 });
 
 const reviewModel = mongoose.model("review", reviewSchema);

@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Deal = require("./productDealModel");
+
 const productSchema = mongoose.Schema(
   {
     name: {
@@ -30,15 +31,16 @@ const productSchema = mongoose.Schema(
     },
     deals: {
       type: [mongoose.Schema.Types.ObjectId],
+      ref: "deal",
     },
     category: {
       type: String,
     },
     reviews: [
-     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref:"reviews"
-    }
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "review",
+      },
     ],
   },
   { timestamps: true }

@@ -10,6 +10,8 @@ const CustomError = require("../utils/customErrorHandler");
 const Review = require("./../modals/reviewModel");
 const { json } = require("body-parser");
 const { default: mongoose } = require("mongoose");
+var { ObjectId } = require("mongodb");
+const Customer = require("./../modals/customerRegistration");
 
 const createProduct = asyncErrorHandler(async (req, res, next) => {
   const tokenObj = req.tokenObj;
@@ -44,6 +46,7 @@ const createProduct = asyncErrorHandler(async (req, res, next) => {
 
 const getOneProduct = asyncErrorHandler(async (req, res, next) => {
   const productId = req.params.productId;
+  let a = productId.toString();
   let productData = await Product.findById(productId);
 
   if (productData.deals) {
@@ -76,11 +79,34 @@ const getOneProduct = asyncErrorHandler(async (req, res, next) => {
   }
   let arr = [];
 
-  let reviewDetails = await Product.find({ _id: productId }).populate("reviews");
-  console.log(reviewDetails);
+  const reviews = await Review.aggregate([
+    {
+      $match: {
+        product_id: new ObjectId(productId),
+      },
+    },
+    {
+      $lookup: {
+        from: "shopcustomers",
+        localField: "customer_id",
+        foreignField: "_id",
+        as: "result",
+      },
+    },
+    {
+      $project: {
+        caption: "$caption",
+        customer_name: "$result.name",
+        star: "$star",
+        picture: "$result.picture",
+      },
+    },
+  ]);
 
-  let obj = { ...productData._doc, reviews: reviewDetails };
-  productData = obj;
+  let d = JSON.stringify(productData);
+  let ab = JSON.parse(d);
+  productData = { ...ab, reviews: reviews };
+  // productData = obj;
   res.status(200).json({
     status: "success",
     data: productData,
@@ -350,16 +376,6 @@ const addReview = asyncErrorHandler(async (req, res, next) => {
     customer_id: customerId,
     product_id: productId,
   });
-
-  const product_review = await Product.findByIdAndUpdate(
-    productId,
-    {
-      $push: {
-        reviews: reviewData._id,
-      },
-    },
-    { new: true, runValidators: true }
-  );
 
   res.status(200).json({
     status: "success",
