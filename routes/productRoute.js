@@ -27,6 +27,18 @@ const upload = multer({
 
 const productController = require("./../controllers/productController");
 
+router.post(
+  "/add-deal/:productId",
+  authController.verifyToken,
+  productController.addDeal
+);
+
+router.delete(
+  "/remove-deal",
+  authController.verifyToken,
+  productController.removeDeal
+);
+
 router
   .route("/")
   .post(
@@ -40,7 +52,8 @@ router
   .route("/:productId")
   .get(productController.getOneProduct)
   .patch(authController.verifyToken, productController.updateProduct)
-  .delete(authController.verifyToken, productController.deleteProduct);
+  .delete(authController.verifyToken, productController.deleteProduct)
+  .post(authController.verifyToken, productController.addReview);
 
 router
   .route("/images/:productId")
@@ -49,4 +62,5 @@ router
     upload.array("new_images", 20),
     productController.updateProductImages
   );
+
 module.exports = router;

@@ -2,19 +2,21 @@ const asyncErrorHandler = require("../utils/asyncErrorHandler");
 const Product = require("./../modals/productsModal");
 const Seller = require("./../modals/sellerAuth");
 const Org = require("./../modals/orgModal");
+const Deal = require("./../modals/productDealModel");
 const path = require("path");
 const fs = require("fs");
 const Apifeatures = require("./../utils/ApiFeatures");
 const CustomError = require("../utils/customErrorHandler");
+const Review = require("./../modals/reviewModel");
 const { json } = require("body-parser");
+const { default: mongoose } = require("mongoose");
 
 const createProduct = asyncErrorHandler(async (req, res, next) => {
-
   const tokenObj = req.tokenObj;
   const seller = await Seller.findById(tokenObj.id);
   const org = await Org.findById(seller._org);
 
-  const { name, description, price } = req.body;
+  const { name, description, price, category = "" } = req.body;
   let arr = [];
   req.files.forEach((data) => {
     let obj = {
@@ -29,6 +31,7 @@ const createProduct = asyncErrorHandler(async (req, res, next) => {
     description: description,
     price: price,
     images: arr,
+    category: category,
     sellerId: seller._id,
     _org: org,
   };
@@ -41,7 +44,43 @@ const createProduct = asyncErrorHandler(async (req, res, next) => {
 
 const getOneProduct = asyncErrorHandler(async (req, res, next) => {
   const productId = req.params.productId;
-  const productData = await Product.findById(productId);
+  let productData = await Product.findById(productId);
+
+  if (productData.deals) {
+    let length = productData.deals.length;
+    console.log("deal length", productData.deals.length);
+    let flag = false;
+    for (let J = length - 1; J >= 0; J--) {
+      const dealData = await Deal.findById(productData.deals[J]);
+
+      if (
+        !flag &&
+        dealData.deleted !== true &&
+        dealData.ends > new Date().toISOString()
+      ) {
+        let discount = dealData._doc.discount;
+        let price = productData.price;
+        let dealPrice = Math.floor(price - (price * discount) / 100);
+
+        let obj = {
+          ...productData._doc,
+          deal: dealData._doc,
+          dealPrice: dealPrice,
+        };
+        productData = obj;
+        flag = true;
+      } else {
+        await Deal.findByIdAndUpdate(productData.deals[J], { deleted: true });
+      }
+    }
+  }
+  let arr = [];
+
+  let reviewDetails = await Product.find({ _id: productId }).populate("reviews");
+  console.log(reviewDetails);
+
+  let obj = { ...productData._doc, reviews: reviewDetails };
+  productData = obj;
   res.status(200).json({
     status: "success",
     data: productData,
@@ -51,14 +90,17 @@ const getOneProduct = asyncErrorHandler(async (req, res, next) => {
 const listOfProduct = asyncErrorHandler(async (req, res, next) => {
   const tokenObj = req.tokenObj;
   const { page = 1, limit = 5, sort = "-createdAt", search = "" } = req.query;
+
   const allDoc = await Product.find({ sellerId: tokenObj.id });
-  const features = await Product.find({
+  let features = await Product.find({
     sellerId: tokenObj.id,
     name: { $regex: search, $options: "i" },
   })
     .limit(limit)
     .skip((page - 1) * limit)
     .sort(sort);
+
+  let deal;
 
   const product = features;
   res.status(200).json({
@@ -72,12 +114,12 @@ const listOfProduct = asyncErrorHandler(async (req, res, next) => {
 });
 
 const updateProduct = asyncErrorHandler(async (req, res, next) => {
-  const { name, description, price } = req.body;
+  const { name, description, price, category } = req.body;
   const tokenObj = req.tokenObj;
   const prodId = req.params.productId;
   const updateProd = await Product.findByIdAndUpdate(
     prodId,
-    { name: name, description: description, price: price },
+    { name: name, description: description, price: price, category: category },
     { runValidators: true, new: true }
   );
   res.status(200).json({
@@ -165,7 +207,6 @@ const updateProductImages = asyncErrorHandler(async (req, res, next) => {
     let abc = [];
 
     for (var i of deleteImages.delete) {
-     
       abc.push(JSON.parse(i || "{}"));
     }
     deleteImages = [...abc];
@@ -247,7 +288,6 @@ const updateProductImages = asyncErrorHandler(async (req, res, next) => {
   // }
 
   res.status(200).json({ result: productData });
-
 });
 
 const deleteProduct = asyncErrorHandler(async (req, res, next) => {
@@ -259,6 +299,74 @@ const deleteProduct = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
+const addDeal = asyncErrorHandler(async (req, res, next) => {
+  const sellerId = req.tokenObj.id;
+  const productId = req.params.productId;
+  const { discount, ends } = req.body;
+
+  const dealData = await Deal.create({ discount, ends, sellerId });
+
+  const addDealProduct = await Product.findByIdAndUpdate(
+    productId,
+    {
+      $push: { deals: dealData._id },
+    },
+    { new: true, runValidators: true }
+  );
+
+  let price = addDealProduct.price;
+  let dealPrice = Math.floor(price - (price * discount) / 100);
+
+  let obj = { ...addDealProduct._doc, deal: dealData, dealPrice: dealPrice };
+  res.status(200).json({
+    status: "success",
+    results: obj,
+  });
+});
+
+const removeDeal = asyncErrorHandler(async (req, res, next) => {
+  const dealId = req.query.dealId;
+
+  const dealData = await Deal.findByIdAndUpdate(
+    dealId,
+    { deleted: true },
+    { new: true }
+  );
+
+  res.status(200).json({
+    status: "success",
+    results: dealData,
+  });
+});
+
+const addReview = asyncErrorHandler(async (req, res, next) => {
+  const productId = req.params.productId;
+  const customerId = req.tokenObj.id;
+  const { star, caption, customer_name, customer_photo } = req.body;
+  const reviewData = await Review.create({
+    star: star,
+    caption: caption,
+
+    customer_id: customerId,
+    product_id: productId,
+  });
+
+  const product_review = await Product.findByIdAndUpdate(
+    productId,
+    {
+      $push: {
+        reviews: reviewData._id,
+      },
+    },
+    { new: true, runValidators: true }
+  );
+
+  res.status(200).json({
+    status: "success",
+    results: "Review added successfully",
+  });
+});
+
 module.exports = {
   createProduct,
   getOneProduct,
@@ -267,4 +375,7 @@ module.exports = {
   deleteProduct,
   updateProdImages,
   updateProductImages,
+  addDeal,
+  removeDeal,
+  addReview,
 };

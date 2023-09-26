@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const authController = require("./../controllers/authController");
 const CustomError = require("../utils/customErrorHandler");
 const { OAuth2Client } = require("google-auth-library");
+const Deal = require("./../modals/productDealModel");
 const axios = require("axios");
 
 const client = new OAuth2Client();
