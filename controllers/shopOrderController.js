@@ -8,6 +8,8 @@ const hbs = require("handlebars");
 const fs = require("fs");
 const path = require("path");
 const { json } = require("body-parser");
+const exp = require("constants");
+const CustomError = require("../utils/customErrorHandler");
 const createOrder = asyncErrorHandler(async (req, res, next) => {
   const userId = req.tokenObj.id;
 
@@ -56,12 +58,20 @@ const getRandomLetter = () => {
 const makePayment = asyncErrorHandler(async (req, res, next) => {
   const sellerId = req.tokenObj.id;
   const { nameOnCard, cardNumber, expiry, cvv } = req.body;
+  let expiryData = expiry.split("/");
   let name = nameOnCard.trim();
   let no = cardNumber;
   if (!name || !cardNumber || !expiry || !cvv) {
     return res.status(400).json({
       message: "All fields are required",
     });
+  }
+  if (
+    parseInt(expiryData[0]) <= new Date().getMonth() &&
+    parseInt(expiryData[1]) <= new Date().getFullYear()
+  ) {
+    let err = new CustomError("Expiry date must be greater than current date");
+    return next(err);
   }
   if (no != "4111111111111111" && no != "5555555555554444") {
     return res.status(400).json({

@@ -38,6 +38,7 @@ const getSpecificOrder = asyncErrorHandler(async (req, res, next) => {
 
 const orderAction = asyncErrorHandler(async (req, res, next) => {
   const orderData = await Order.findById(req.params.orderId);
+  var isCancelled = false;
   if (!orderData) {
     const error = new CustomError(
       `The order id ${req.params.orderId} is not present`,
@@ -45,12 +46,16 @@ const orderAction = asyncErrorHandler(async (req, res, next) => {
     );
     return next(error);
   }
+  if (req.params.action === "Cancelled") {
+    isCancelled = true;
+  }
   if (orderData.status === "Cancelled") {
     let e = new CustomError("The order is already cancelled", 401);
     return next(e);
   }
   const updatedData = await Order.findByIdAndUpdate(req.params.orderId, {
     status: req.params.action,
+    paymentStatus: isCancelled ? "Refunded" : "Paid",
   });
   res.status(200).json({
     results: orderData,
