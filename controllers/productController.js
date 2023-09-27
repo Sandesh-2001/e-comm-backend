@@ -10,15 +10,20 @@ const CustomError = require("../utils/customErrorHandler");
 const Review = require("./../modals/reviewModel");
 const { json } = require("body-parser");
 const { default: mongoose } = require("mongoose");
+const Order = require("./../modals/orderModel");
 var { ObjectId } = require("mongodb");
 const Customer = require("./../modals/customerRegistration");
 
 const createProduct = asyncErrorHandler(async (req, res, next) => {
   const tokenObj = req.tokenObj;
-  const seller = await Seller.findById(tokenObj.id);
-  const org = await Org.findById(seller._org);
+  console.log(tokenObj);
+  const seller = await Seller.findOne({ _id: new ObjectId(tokenObj.id) });
+
+  console.log(seller);
+  const org = await Org.findOne({ _id: new ObjectId(seller._org) });
 
   const { name, description, price, category = "" } = req.body;
+  console.log(category);
   let arr = [];
   req.files.forEach((data) => {
     let obj = {
@@ -33,7 +38,7 @@ const createProduct = asyncErrorHandler(async (req, res, next) => {
     description: description,
     price: price,
     images: arr,
-    category: category,
+    category: category.toLowerCase(),
     sellerId: seller._id,
     _org: org,
   };
@@ -99,6 +104,7 @@ const getOneProduct = asyncErrorHandler(async (req, res, next) => {
         customer_name: "$result.name",
         star: "$star",
         picture: "$result.picture",
+        customer_id: "$result._id",
       },
     },
   ]);
@@ -329,6 +335,11 @@ const addDeal = asyncErrorHandler(async (req, res, next) => {
   const sellerId = req.tokenObj.id;
   const productId = req.params.productId;
   const { discount, ends } = req.body;
+  let date = new Date(ends);
+  if (date < new Date()) {
+    const err = new CustomError("Deal ends date must greater than today", 401);
+    return next(err);
+  }
 
   const dealData = await Deal.create({ discount, ends, sellerId });
 
@@ -383,6 +394,103 @@ const addReview = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
+const getDashboard = asyncErrorHandler(async (req, res, next) => {
+  const sellerId = req.tokenObj.id;
+
+  const products = await Product.aggregate([
+    {
+      $match: {
+        sellerId: new ObjectId("64ec4d59093bb5d2eca58e96"),
+      },
+    },
+    {
+      $group: {
+        _id: "$category",
+        name: { $first: "$category" },
+        value: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const orderDetails = await Order.aggregate([
+    {
+      $match: {
+        sellerId: new ObjectId(sellerId),
+      },
+    },
+
+    {
+      $group: {
+        _id: {
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        },
+
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  let months = [
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+  ];
+  let arr = [];
+
+  ss: for (let i = 0; i < months.length; i++) {
+    for (let j = 0; j < orderDetails.length; j++) {
+      if (orderDetails[j]["_id"]["month"] === i + 1) {
+        let obj = {
+          name: months[i].toLocaleString(),
+          value: orderDetails[j]["count"],
+        };
+        arr.push(obj);
+        continue ss;
+      }
+    }
+    let obj = { name: months[i].toLocaleString(), value: 0 };
+    arr.push(obj);
+  }
+
+  // const orderDetails = await Order.aggregate(getPipe());
+  res.json({
+    status: "success",
+    results: {
+      product: products,
+      order: arr,
+    },
+  });
+});
+
+function getPipe() {
+  return [
+    // {
+    //   $replaceWith: {
+    //     $setField: {
+    //       field: "createdAt",
+    //       input: "$$ROOT",
+    //       value: { $toString: "$createdAt" },
+    //     },
+    //   },
+    // },
+    {
+      $match: {
+        createdAt: { $toStr: "$createdAt" },
+      },
+    },
+  ];
+}
+
 module.exports = {
   createProduct,
   getOneProduct,
@@ -394,4 +502,5 @@ module.exports = {
   addDeal,
   removeDeal,
   addReview,
+  getDashboard,
 };

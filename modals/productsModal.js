@@ -35,6 +35,7 @@ const productSchema = mongoose.Schema(
     },
     category: {
       type: String,
+      required: [true, "Category is required field"],
     },
     reviews: [
       {

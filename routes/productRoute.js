@@ -39,6 +39,12 @@ router.delete(
   productController.removeDeal
 );
 
+router.get(
+  "/get-category-details",
+  authController.verifyToken,
+  productController.getDashboard
+);
+
 router
   .route("/")
   .post(
